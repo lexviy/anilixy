@@ -70,9 +70,14 @@ anilixy
 
 ### Manual installation
 
+anilixy is on [PyPI](https://pypi.org/project/anilixy/):
+
 ```bash
-pipx install /path/to/anilixy
+pipx install anilixy
 ```
+
+pipx only installs the Python part. Install mpv, ani-cli, fzf and git yourself
+(see [Requirements](#requirements)).
 
 ### PDF light novels (optional)
 
@@ -102,8 +107,7 @@ ani-cli is updated separately:
 ani-cli -U
 ```
 
-If you installed with pipx by hand, use `pipx install --force /path/to/anilixy`
-after `git pull` (and `pipx inject anilixy pymupdf` again for PDF support).
+If you installed from PyPI with pipx, use `pipx upgrade anilixy` instead.
 
 ## First run: logging in to AniList
 
