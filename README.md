@@ -14,6 +14,8 @@ progress synced to [AniList](https://anilist.co). Built with
 [Textual](https://textual.textualize.io), playing anime through
 [ani-cli](https://github.com/pystardust/ani-cli) and mpv.
 
+https://github.com/user-attachments/assets/e8abbd41-564e-465b-9813-773e46e14665
+
 ## Features
 
 - **Anime**: press *Watch* and it starts at the next episode after your AniList
