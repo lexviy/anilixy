@@ -28,7 +28,7 @@ https://github.com/user-attachments/assets/e8abbd41-564e-465b-9813-773e46e14665
   progress. If a book isn't in your folder, it lists the volumes on JNovels so
   you can download them.
 - **New episodes and chapters**: it checks in the background and tells you, in
-  the app and with a desktop notification.
+  the app and with a desktop notification (on Windows, only in the app).
 - **AniList**: search anime, manga, characters, staff and studios. Browse your
   profile, lists, favourites and stats, and edit list entries.
 - **Extras**: themes, animated backgrounds, Discord Rich Presence and a guest
@@ -36,13 +36,18 @@ https://github.com/user-attachments/assets/e8abbd41-564e-465b-9813-773e46e14665
 
 ## Requirements
 
-- Linux or macOS
-- Python 3.10+
+- Linux, macOS or Windows 10/11
+- Python 3.10+ (on Windows, 64-bit Python 3.10 to 3.14: the `reliq` dependency
+  has no Windows packages for newer versions yet)
 - [mpv](https://mpv.io), [ani-cli](https://github.com/pystardust/ani-cli),
-  [fzf](https://github.com/junegunn/fzf) and git
+  [fzf](https://github.com/junegunn/fzf) and git (on Windows,
+  [Git for Windows](https://gitforwindows.org), since ani-cli runs in its bash)
 - For sharp covers and manga pages, a terminal with the Kitty graphics
   protocol or sixel (kitty, Ghostty, WezTerm, Konsole, foot…). Other
-  terminals fall back to blocky, low-resolution images.
+  terminals fall back to blocky, low-resolution images, and the manga reader
+  can't show pages at all. On Windows, use Windows Terminal 1.22+ or a
+  [WezTerm](https://wezterm.org) nightly build: stable WezTerm's console layer
+  drops image data before it reaches the terminal.
 
 ## Installation
 
@@ -63,12 +68,40 @@ bash install.sh
 3. Installs anilixy with [pipx](https://pipx.pypa.io). If pipx isn't
    available, it uses a virtual environment in `~/.local/share/anilixy/venv`.
    It also asks whether to add PDF support for light novels.
+4. Adds anilixy to your app launcher (rofi, wofi, GNOME, KDE and others).
 
 Then run:
 
 ```bash
 anilixy
 ```
+
+### Windows
+
+The easiest way, with no Python needed: download
+`anilixy-windows-x64.zip` from the
+[releases page](https://github.com/lexviy/anilixy/releases) and extract it.
+Run `install-dependencies.cmd` once to get Git for Windows, mpv, fzf and
+ani-cli, then double-click `anilixy.exe`. It opens in its own window, using a
+portable copy of Windows Terminal that comes in the zip and leaves any Terminal
+you have installed alone.
+
+To install from source instead, in PowerShell:
+
+```powershell
+git clone https://github.com/lexviy/anilixy.git
+cd anilixy
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+`install.ps1` installs what is missing with [Scoop](https://scoop.sh) or winget
+(Git for Windows, mpv, fzf), fetches ani-cli into `%LOCALAPPDATA%\anilixy\bin`
+and installs anilixy with pipx. A 64-bit Python 3.10 to 3.14 must already be
+installed; it can sit beside newer versions.
+
+Run `anilixy` from Windows Terminal, in PowerShell or cmd. Avoid the
+Git Bash window (mintty), which has
+[known problems with fzf](https://github.com/pystardust/ani-cli#windows-known-problems-and-solutions).
 
 ### Manual installation
 
@@ -148,7 +181,7 @@ added in **Custom light novels**.
 It works out of the box when the Discord desktop app is running, and you can
 turn it off in Settings. To show your own Discord application instead, set
 `ANILIXY_DISCORD_CLIENT_ID` or write `{"client_id": "..."}` to
-`~/.config/anilixy/discord.json`.
+`discord.json` in the configuration folder (see below).
 
 ## Where your data lives
 
@@ -158,6 +191,14 @@ turn it off in Settings. To show your own Discord application instead, set
 | `~/.cache/anilixy/` | covers, cached AniList pages, `anilixy.log` |
 | `~/.local/share/anilixy/manga/` | manga chapters saved offline |
 
+On Windows:
+
+| Path | What |
+|---|---|
+| `%APPDATA%\anilixy\` | login token, settings, progress, saved manga sources |
+| `%LOCALAPPDATA%\anilixy\cache\` | covers, cached AniList pages, `anilixy.log` |
+| `%LOCALAPPDATA%\anilixy\manga\` | manga chapters saved offline |
+
 *Settings → Clean cache* empties the cache, and *Clear downloads* deletes the
 offline chapters.
 
@@ -165,10 +206,19 @@ offline chapters.
 
 - **Something failed silently?** Look at `~/.cache/anilixy/anilixy.log`. To
   also log the errors that the app ignores on purpose, run
-  `ANILIXY_DEBUG=1 anilixy`.
+  `ANILIXY_DEBUG=1 anilixy` (in PowerShell: `$env:ANILIXY_DEBUG=1; anilixy`).
 - **Blurry or blocky images**: your terminal doesn't support the Kitty
   graphics protocol or sixel, so anilixy falls back to text blocks. Try kitty,
   Ghostty, WezTerm, Konsole or foot.
+- **Pixelated covers or blank manga pages on Windows**: the terminal or its
+  console layer doesn't pass images through. Use Windows Terminal 1.22+ (from
+  the Microsoft Store or `winget install Microsoft.WindowsTerminal`) or
+  `winget install wez.wezterm.nightly`.
+- **`Failed to build reliq` on Windows**: your Python is too new or not 64-bit.
+  Install 64-bit Python 3.14, then run `install.ps1` again.
+- **"ani-cli or Git Bash was not found" on Windows**: anilixy needs
+  `bash.exe` from Git for Windows (WSL's bash doesn't work) and the `ani-cli`
+  script, on `PATH` or in `%LOCALAPPDATA%\anilixy\bin`.
 - **Wrong series when watching or reading**: use *Reset source* on the anime
   page, or *Source* on the manga page, to pick it again.
 
@@ -183,6 +233,10 @@ offline (`~/.local/share/anilixy/manga`), the cache with covers and logs
 (`~/.cache/anilixy`) and your configuration (`~/.config/anilixy`: login,
 settings, progress and history). System packages are never removed.
 
+On Windows, run `pipx uninstall anilixy`, then delete `%APPDATA%\anilixy` and
+`%LOCALAPPDATA%\anilixy`. Deleting them also removes your login, progress and
+offline manga.
+
 ## Project layout
 
 ```
@@ -193,7 +247,7 @@ src/anilixy/
 ├── novels/     light novel screens, EPUB/PDF reader, JNovels, custom novels
 ├── anilist/    AniList API (with disk cache), login, profile, formatting
 ├── ui/         shared screens (menu, search, settings, guide…) and widgets
-└── core/       storage paths, settings, logging, update checks, Discord RPC
+└── core/       storage paths, settings, logging, update checks, Discord RPC, IPC
 ```
 
 ## Disclaimer

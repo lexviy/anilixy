@@ -22,6 +22,8 @@ LOCAL_BIN="$HOME/.local/bin"
 LOCAL_SHARE="$HOME/.local/share/anilixy"
 VENV_DIR="$LOCAL_SHARE/venv"
 LAUNCHER="$LOCAL_BIN/anilixy"
+DESKTOP_FILE="${XDG_DATA_HOME:-$HOME/.local/share}/applications/anilixy.desktop"
+ICON_FILE="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/512x512/apps/anilixy.png"
 ANI_CLI_REF="${ANI_CLI_REF:-v5.1}"
 ANI_CLI_DIR="/usr/local/bin"
 MIN_PYTHON="3.10"
@@ -330,6 +332,34 @@ install_anilixy() {
   fi
 }
 
+install_desktop_entry() {
+  [[ "$OS" == "Linux" ]] || return 0
+
+  local bin_dir=""
+  if command_exists pipx; then
+    bin_dir="$(pipx environment --value PIPX_BIN_DIR 2>/dev/null)" || bin_dir=""
+  fi
+  local executable="${bin_dir:-$LOCAL_BIN}/anilixy"
+  [[ -x "$executable" ]] || executable="$LAUNCHER"
+
+  mkdir -p "$(dirname -- "$ICON_FILE")"
+  cp -- "$PROJECT_DIR/assets/anilixy.png" "$ICON_FILE"
+
+  mkdir -p "$(dirname -- "$DESKTOP_FILE")"
+  cat >"$DESKTOP_FILE" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Anilixy
+Comment=Watch anime and read manga and light novels, synced with AniList
+Exec="$executable"
+Icon=anilixy
+Terminal=true
+Categories=AudioVideo;Video;Player;
+Keywords=anime;manga;novel;anilist;
+EOF
+  info "App launcher entry created at $DESKTOP_FILE"
+}
+
 check_installation() {
   hash -r
   if command_exists anilixy; then
@@ -358,6 +388,7 @@ main() {
   check_python
   install_ani_cli
   install_anilixy
+  install_desktop_entry
   check_installation
 }
 

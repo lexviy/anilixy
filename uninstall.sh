@@ -23,6 +23,8 @@ LOCAL_BIN="$HOME/.local/bin"
 LOCAL_SHARE="$HOME/.local/share/anilixy"
 VENV_DIR="$LOCAL_SHARE/venv"
 LAUNCHER="$LOCAL_BIN/anilixy"
+DESKTOP_FILE="${XDG_DATA_HOME:-$HOME/.local/share}/applications/anilixy.desktop"
+ICON_FILE="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/512x512/apps/anilixy.png"
 ANI_CLI_SYSTEM="/usr/local/bin/ani-cli"
 CONFIG_DIR="$HOME/.config/anilixy"
 DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/anilixy"
@@ -93,6 +95,17 @@ remove_anilixy() {
     fi
   elif [[ -e "$LAUNCHER" ]]; then
     warn "Keeping $LAUNCHER because it was not created by the local installer."
+  fi
+}
+
+remove_desktop_entry() {
+  [[ -f "$DESKTOP_FILE" ]] || return 0
+
+  if ask "Remove the app launcher entry at $DESKTOP_FILE?"; then
+    rm -f -- "$DESKTOP_FILE" "$ICON_FILE"
+    info "App launcher entry removed."
+  else
+    info "Keeping the app launcher entry."
   fi
 }
 
@@ -183,6 +196,7 @@ main() {
   printf '\n'
 
   remove_anilixy
+  remove_desktop_entry
   remove_ani_cli
   remove_offline_manga
   remove_cache

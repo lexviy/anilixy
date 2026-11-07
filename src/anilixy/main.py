@@ -1,9 +1,19 @@
 import logging
 
-from anilixy.app import AnilixyApp
-from anilixy.core.discord_rpc import DiscordRPC
-from anilixy.core.log import setup_logging
-from anilixy.core.settings import load_discord
+from anilixy.core.console import (
+    enable_vt_output,
+    open_in_own_window,
+    set_window_title,
+)
+
+open_in_own_window()
+set_window_title()
+enable_vt_output()
+
+from anilixy.app import AnilixyApp  # noqa: E402
+from anilixy.core.discord_rpc import DiscordRPC  # noqa: E402
+from anilixy.core.log import setup_logging  # noqa: E402
+from anilixy.core.settings import load_discord  # noqa: E402
 
 log = logging.getLogger(__name__)
 

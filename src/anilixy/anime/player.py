@@ -1,11 +1,14 @@
 import json
 import os
 import shutil
-import socket
 import stat
 import subprocess
 import tempfile
 import threading
+from pathlib import Path
+
+from anilixy.core import ipc
+from anilixy.core.storage import DATA_DIR
 
 AUTO_SELECT = False
 
@@ -42,6 +45,12 @@ case "$prompt" in
         cat >/dev/null
         echo quit
         ;;
+    "Select anime"*)
+        if [ -n "$ANILIXY_SAVED_TITLE" ]; then
+            exec awk 'tolower(substr($0, index($0, " ") + 1)) == tolower(ENVIRON["ANILIXY_SAVED_TITLE"]) { print; exit }'
+        fi
+        exec fzf --reverse --cycle --prompt "$prompt"
+        ;;
     *)
         exec fzf --reverse --cycle --prompt "$prompt"
         ;;
@@ -49,8 +58,72 @@ esac
 """
 
 
+ANI_CLI_MISSING = (
+    "ani-cli or Git Bash was not found" if ipc.WINDOWS else "ani-cli is not installed"
+)
+
+
+def git_bash() -> Path | None:
+    roots = []
+    if os.environ.get("GIT_INSTALL_ROOT"):
+        roots.append(Path(os.environ["GIT_INSTALL_ROOT"]))
+    git = shutil.which("git")
+    if git:
+        roots += Path(git).resolve().parents
+    for variable, folder in (
+        ("ProgramW6432", "Git"),
+        ("ProgramFiles", "Git"),
+        ("ProgramFiles(x86)", "Git"),
+        ("LOCALAPPDATA", "Programs/Git"),
+    ):
+        if os.environ.get(variable):
+            roots.append(Path(os.environ[variable]) / folder)
+    roots.append(Path.home() / "scoop/apps/git/current")
+    for root in roots:
+        bash = root / "bin" / "bash.exe"
+        if bash.is_file():
+            return bash
+    return None
+
+
+def ani_cli_script() -> Path | None:
+    folders = [Path(p) for p in os.environ.get("PATH", "").split(os.pathsep) if p]
+    folders += [DATA_DIR / "bin", Path.home() / "scoop/apps/ani-cli/current"]
+    for folder in folders:
+        script = folder / "ani-cli"
+        if script.is_file():
+            return script
+    return None
+
+
+def mpv_folder() -> Path | None:
+    roots = [
+        Path(os.environ[variable])
+        for variable in ("ProgramW6432", "ProgramFiles", "ProgramFiles(x86)")
+        if os.environ.get(variable)
+    ]
+    if os.environ.get("LOCALAPPDATA"):
+        local = Path(os.environ["LOCALAPPDATA"])
+        roots += [local / "Programs", local / "Microsoft/WinGet/Packages"]
+    roots.append(Path.home() / "scoop/apps/mpv")
+    for root in roots:
+        for mpv in root.glob("*/mpv.exe"):
+            return mpv.parent
+    return None
+
+
+def ani_cli_command() -> list[str] | None:
+    if not ipc.WINDOWS:
+        return ["ani-cli"] if shutil.which("ani-cli") else None
+    bash = git_bash()
+    script = ani_cli_script()
+    if bash is None or script is None:
+        return None
+    return [str(bash), script.as_posix()]
+
+
 def ani_cli_installed() -> bool:
-    return shutil.which("ani-cli") is not None
+    return ani_cli_command() is not None
 
 
 def search_query(title: str) -> str:
@@ -70,8 +143,8 @@ class MpvWatcher:
     SKIP_MESSAGE = "anilixy-next"
     PREV_MESSAGE = "anilixy-prev"
 
-    def __init__(self, sock_path, on_watched=None):
-        self.sock_path = sock_path
+    def __init__(self, address, on_watched=None):
+        self.address = address
         self.on_watched = on_watched
         self.position = None
         self.percent = None
@@ -103,12 +176,9 @@ class MpvWatcher:
 
     def _connect(self):
         while not self._stop.is_set():
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             try:
-                sock.connect(self.sock_path)
-                return sock
+                return ipc.connect(self.address)
             except OSError:
-                sock.close()
                 self._stop.wait(0.3)
         return None
 
@@ -131,9 +201,8 @@ class MpvWatcher:
                 self._send("keybind", key, f"script-message {self.PREV_MESSAGE}")
             self._send("show-text", "N: next episode | P: previous episode", 4000)
 
-            with sock.makefile("r") as reader:
-                for line in reader:
-                    self._handle(line)
+            for line in ipc.read_lines(sock):
+                self._handle(line)
         except OSError:
             pass
         finally:
@@ -206,23 +275,32 @@ def read_history_entry(hist_file):
 
 def play(title: str, episode: int, on_watched=None, entry=None, start=None, interactive=True):
     work_dir = tempfile.mkdtemp(prefix="anilixy-")
-    sock_path = os.path.join(work_dir, "mpv.sock")
+    if ipc.WINDOWS:
+        mpv_server = os.path.basename(work_dir)
+        address = ipc.pipe_path(mpv_server)
+    else:
+        mpv_server = address = os.path.join(work_dir, "mpv.sock")
 
     hist_dir = os.path.join(work_dir, "history")
     hist_file = os.path.join(hist_dir, "ani-hsts")
     os.makedirs(hist_dir, exist_ok=True)
 
     menu_path = os.path.join(work_dir, "menu.sh")
-    with open(menu_path, "w", encoding="utf-8") as f:
+    with open(menu_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(MENU_SCRIPT)
     os.chmod(menu_path, os.stat(menu_path).st_mode | stat.S_IXUSR)
 
     env = os.environ.copy()
-    env["ANI_CLI_HIST_DIR"] = hist_dir
-    env["ANI_CLI_MENU"] = menu_path
+    if ipc.WINDOWS and not shutil.which("mpv.exe"):
+        folder = mpv_folder()
+        if folder is not None:
+            env["PATH"] = f"{folder}{os.pathsep}{env.get('PATH', '')}"
+
+    env["ANI_CLI_HIST_DIR"] = Path(hist_dir).as_posix()
+    env["ANI_CLI_MENU"] = Path(menu_path).as_posix()
 
     flags = env.get("ANI_CLI_PLAYER_FLAGS", "")
-    flags += f" --input-ipc-server={sock_path}"
+    flags += f" --input-ipc-server={mpv_server}"
     if start:
         flags += f" --start={start:.1f}"
     env["ANI_CLI_PLAYER_FLAGS"] = flags.strip()
@@ -253,16 +331,17 @@ def play(title: str, episode: int, on_watched=None, entry=None, start=None, inte
     try:
         for plan in plans:
             plan_env = dict(env)
-            cmd = ["ani-cli", "--no-detach"]
+            cmd = ani_cli_command() + ["--no-detach"]
 
             open(hist_file, "w", encoding="utf-8").close()
 
             if plan == "history":
-                with open(hist_file, "w", encoding="utf-8") as f:
+                with open(hist_file, "w", encoding="utf-8", newline="\n") as f:
                     f.write(f"{episode - 1}\t{entry['id']}\t{entry['title']}\n")
                 cmd += ["-c"] + HISTORY_SELECT_FLAGS + ani_cli_args()
             elif plan == "exact":
                 plan_env["ANI_CLI_EXACT"] = "1"
+                plan_env["ANILIXY_SAVED_TITLE"] = entry["title"]
                 cmd += ["-e", str(episode)] + ani_cli_args() + [entry["title"]]
             else:
                 cmd += ["-e", str(episode)]
@@ -271,7 +350,7 @@ def play(title: str, episode: int, on_watched=None, entry=None, start=None, inte
                 cmd += ani_cli_args()
                 cmd.append(search_query(title))
 
-            watcher = MpvWatcher(sock_path, on_watched)
+            watcher = MpvWatcher(address, on_watched)
             watcher.start()
             try:
                 code = subprocess.run(cmd, env=plan_env).returncode

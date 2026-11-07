@@ -9,6 +9,7 @@ from anilixy.anilist.api import fetch_media
 from anilixy.anilist.login import load_token, logout
 from anilixy.anilist.profile import fetch_profile
 from anilixy.anime.screen import AnimeScreen
+from anilixy.core import ipc
 from anilixy.core.settings import load_animation, load_guest, load_theme
 from anilixy.core.updates import check_updates, desktop_notify
 from anilixy.manga.screen import MangaScreen
@@ -41,6 +42,8 @@ class AnilixyApp(App):
         valid = {t.name for t in THEMES}
         self.theme = saved if saved in valid else DEFAULT_THEME
         self.engine.start(load_animation())
+        if ipc.WINDOWS:
+            self._sync_available = True
         if not self.token:
             if load_guest():
                 self.guest = True

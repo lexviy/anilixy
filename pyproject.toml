@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "anilixy"
-version = "0.1.0"
+version = "0.2.0"
 description = "Terminal app to watch anime, read manga and light novels, synced with AniList."
 readme = "README.md"
 license = "AGPL-3.0-or-later"
@@ -21,6 +21,7 @@ dependencies = [
     "beautifulsoup4",
     "ebooklib",
     "weebcentral",
+    "numpy; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]

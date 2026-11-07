@@ -79,9 +79,10 @@ def local_pages(anilist_id, chapter_id):
 
 
 def read_local(url) -> bytes:
-    from urllib.parse import unquote, urlparse
+    from urllib.parse import urlparse
+    from urllib.request import url2pathname
 
-    return Path(unquote(urlparse(url).path)).read_bytes()
+    return Path(url2pathname(urlparse(url).path)).read_bytes()
 
 
 def _extension(url, content_type) -> str:

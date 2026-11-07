@@ -19,13 +19,13 @@ from anilixy.anilist.profile import fetch_profile
 from anilixy.core.browser import open_url
 from anilixy.core.settings import load_ln_folder
 from anilixy.manga import new_chapters
-from anilixy.manga.history import get_mapping
+from anilixy.manga.history import get_mapping, local_manga
 from anilixy.manga.reader import MangaReaderScreen
 from anilixy.manga.sources import source_for
 from anilixy.novels import custom as custom_novels
 from anilixy.novels import jnovels
 from anilixy.novels.reader import LightNovelReaderScreen
-from anilixy.novels.reading import last_read
+from anilixy.novels.reading import last_read, local_novels
 from anilixy.ui.animations import Backdrop
 from anilixy.ui.dialogs import ConfirmScreen
 from anilixy.ui.picker import fzf_available, pick_path, pick_paths
@@ -268,10 +268,19 @@ class KeepReadingScreen(Screen):
     def on_mount(self) -> None:
         self.load_list()
 
+    def on_screen_resume(self) -> None:
+        if self.app.guest:
+            self.load_list()
+
     @work(thread=True)
     def load_list(self) -> None:
         if self.app.guest:
-            self.app.call_from_thread(self.fill_list, [])
+            entries = sorted(
+                local_manga() + local_novels(),
+                key=lambda entry: entry["updated"],
+                reverse=True,
+            )
+            self.app.call_from_thread(self.fill_list, entries)
             return
         try:
             profile = self.app.profile or fetch_profile(self.app.token)

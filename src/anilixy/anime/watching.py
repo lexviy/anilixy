@@ -5,7 +5,7 @@ import requests
 
 from anilixy.anilist.api import save_progress, start_media
 from anilixy.anime.entries import load_entry, save_entry
-from anilixy.anime.player import ani_cli_installed, play
+from anilixy.anime.player import ANI_CLI_MISSING, ani_cli_installed, play
 from anilixy.anime.progress import save_local_progress
 from anilixy.anime.resume import clear_resume, format_time, load_resume, save_resume
 from anilixy.core.settings import load_autoplay_delay
@@ -36,7 +36,7 @@ def countdown(seconds, next_episode) -> bool:
 
 def watch(app, anime, episode) -> None:
     if not ani_cli_installed():
-        app.notify("ani-cli is not installed", severity="error")
+        app.notify(ANI_CLI_MISSING, severity="error")
         return
 
     media_id = anime["id"]

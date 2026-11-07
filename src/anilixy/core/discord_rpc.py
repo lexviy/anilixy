@@ -1,14 +1,13 @@
 import json
 import logging
 import os
-import select
-import socket
 import struct
 import threading
 import time
 from pathlib import Path
 from urllib.parse import quote
 
+from anilixy.core import ipc
 from anilixy.core.storage import CONFIG_DIR
 
 log = logging.getLogger(__name__)
@@ -29,6 +28,9 @@ MIN_INTERVAL = 4.0
 
 
 def _get_ipc_paths():
+    if ipc.WINDOWS:
+        return [ipc.pipe_path(f"discord-ipc-{i}") for i in range(10)]
+
     paths = []
     runtime = os.environ.get("XDG_RUNTIME_DIR")
     if runtime:
@@ -139,22 +141,10 @@ class DiscordRPC:
 
             sock = None
             for path in _get_ipc_paths():
-                candidate = None
                 try:
-                    if not path.exists():
-                        continue
-                    candidate = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                    candidate.settimeout(2.0)
-                    candidate.connect(str(path))
-                    candidate.settimeout(None)
-                    sock = candidate
+                    sock = ipc.connect(str(path), timeout=2.0)
                     break
                 except Exception:
-                    if candidate is not None:
-                        try:
-                            candidate.close()
-                        except Exception:
-                            log.debug("ignored error", exc_info=True)
                     continue
 
             if sock is None:
@@ -222,7 +212,7 @@ class DiscordRPC:
                 self._stop.wait(RETRY_INTERVAL)
                 continue
             try:
-                ready, _, _ = select.select([sock], [], [], 2.0)
+                ready = ipc.wait_readable(sock, 2.0)
             except (OSError, ValueError):
                 self.disconnect()
                 continue

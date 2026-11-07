@@ -86,6 +86,7 @@ KEEP_RADIUS = 1
 ZOOM_MIN = 0.2
 ZOOM_MAX = 1.0
 ZOOM_STEP = 0.1
+POSITION_SAVE_SECONDS = 2
 
 
 NUMBER = (
@@ -612,6 +613,26 @@ def open_book(data):
     raise BookError("Unsupported file (expected an EPUB or a PDF)")
 
 
+class NovelScroll(VerticalScroll):
+    def action_scroll_up(self) -> None:
+        self.scroll_up(animate=False)
+
+    def action_scroll_down(self) -> None:
+        self.scroll_down(animate=False)
+
+    def action_page_up(self) -> None:
+        self.scroll_page_up(animate=False)
+
+    def action_page_down(self) -> None:
+        self.scroll_page_down(animate=False)
+
+    def action_scroll_home(self) -> None:
+        self.scroll_home(animate=False)
+
+    def action_scroll_end(self) -> None:
+        self.scroll_end(animate=False)
+
+
 class LightNovelReaderScreen(Screen):
     BINDINGS = [
         Binding("left", "prev_chapter", "Prev chapter", show=False),
@@ -674,6 +695,7 @@ class LightNovelReaderScreen(Screen):
         self.total_api_chapters = total_api_chapters
         self._start_chapter = start_chapter
         self._forced_index = None
+        self.custom = custom
 
         if custom:
             token = None
@@ -686,6 +708,8 @@ class LightNovelReaderScreen(Screen):
         self.source = None
         self.chapters = []
         self.chapter_index = 0
+        self._position = 0.0
+        self._placed = False
         self.segments = []
         self.auto = False
         self._runs = []
@@ -724,19 +748,22 @@ class LightNovelReaderScreen(Screen):
         save_novel_state(
             self.anilist_id,
             self.book_key,
+            title=None if self.custom else self.title,
             chapter=self.chapter_index,
+            position=self._position,
             segments=self.segments,
             length=len(self.chapters),
             auto=self.auto,
         )
 
     def compose(self) -> ComposeResult:
-        with VerticalScroll(id="ln-reader"):
+        with NovelScroll(id="ln-reader"):
             yield Static("Loading book...", id="ln-text")
         yield Static("", id="ln-status")
 
     def on_mount(self) -> None:
         self.query_one("#ln-reader").focus()
+        self.set_interval(POSITION_SAVE_SECONDS, self.remember_position)
         self.load_book()
 
     def on_resize(self, event) -> None:
@@ -855,6 +882,7 @@ class LightNovelReaderScreen(Screen):
         self.base = base_for(self.anilist_id, self.volumes, self.volume_index)
 
         last = len(self.chapters) - 1
+        position = 0.0
         if self._forced_index is not None:
             index = self._forced_index
             self._forced_index = None
@@ -867,9 +895,11 @@ class LightNovelReaderScreen(Screen):
             index = last
         else:
             index = state["chapter"]
+            position = state.get("position", 0.0)
         self._entry = None
         if not 0 <= index <= last:
             index = 0
+            position = 0.0
 
         if detected:
             total = counted(self.segments, len(self.chapters))
@@ -881,7 +911,7 @@ class LightNovelReaderScreen(Screen):
             self.notify(
                 "New volume: press C on its first chapter", severity="warning", timeout=6
             )
-        self.goto_chapter(index)
+        self.goto_chapter(index, position)
 
     def prepare_chapter(self, index):
         source, volume = self.source, self.volume_index
@@ -941,8 +971,10 @@ class LightNovelReaderScreen(Screen):
             widgets.append(Static(Text("(empty page)", style="dim")))
         return widgets, pictures
 
-    def goto_chapter(self, index) -> None:
+    def goto_chapter(self, index, position=0.0) -> None:
         self.chapter_index = index
+        self._position = position
+        self._placed = False
         self.persist()
         self.schedule_anilist()
         self.update_status()
@@ -963,12 +995,31 @@ class LightNovelReaderScreen(Screen):
                 await reader.remove_children()
                 await reader.mount_all(widgets)
                 reader.scroll_home(animate=False)
+            self.call_after_refresh(self.restore_position, index)
         except asyncio.CancelledError:
             raise
         except Exception as error:
             self.notify(f"Error showing chapter: {error}", severity="error")
             return
         self.prefetch_neighbors(index)
+
+    def restore_position(self, index) -> None:
+        if index != self.chapter_index or not self.chapters or not self.is_attached:
+            return
+        reader = self.query_one("#ln-reader", VerticalScroll)
+        reader.scroll_to(y=self._position * reader.max_scroll_y, animate=False)
+        self._placed = True
+
+    def remember_position(self) -> None:
+        if not self._placed:
+            return
+        reader = self.query_one("#ln-reader", VerticalScroll)
+        if not reader.max_scroll_y:
+            return
+        position = round(reader.scroll_y / reader.max_scroll_y, 4)
+        if position != self._position:
+            self._position = position
+            self.persist()
 
     @work(thread=True, group="prefetch")
     def prefetch_neighbors(self, index) -> None:
@@ -1140,6 +1191,8 @@ class LightNovelReaderScreen(Screen):
         self.app._update_rpc(self)
 
     def open_volume(self, index: int, entry=None) -> None:
+        self.remember_position()
+        self._placed = False
         self.volume_index = index
         self._entry = entry
         self.chapters = []
@@ -1211,4 +1264,5 @@ class LightNovelReaderScreen(Screen):
             self.notify("Last chapter", severity="warning")
 
     def action_back(self) -> None:
+        self.remember_position()
         self.app.pop_screen()

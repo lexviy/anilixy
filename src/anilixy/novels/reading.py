@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 
 from anilixy.core.storage import CONFIG_DIR, load_json, write_json
@@ -63,12 +64,15 @@ def get_novel_state(media_id, book_key) -> dict:
     return {**book, "segments": [list(s) for s in book["segments"]]}
 
 
-def save_novel_state(media_id, book_key, *, touch=True, **fields) -> None:
+def save_novel_state(media_id, book_key, *, touch=True, title=None, **fields) -> None:
     data = _load()
     media = _media(data, media_id)
     _book(media, book_key).update(fields)
     if touch:
         media["last"] = book_key
+        media["updated"] = time.time()
+    if title:
+        media["title"] = title
     data[str(media_id)] = media
     _save(data)
 
@@ -99,6 +103,7 @@ def reset_novel_progress(media_id) -> None:
     for key in list(media["books"]):
         book = _book(media, key)
         book["chapter"] = 0
+        book["position"] = 0.0
         book["segments"] = []
     media["last"] = None
     data[str(media_id)] = media
@@ -113,6 +118,29 @@ def last_read(media_id):
         return None
     book = _upgrade(book)
     return last, book.get("chapter", 0) + 1
+
+
+def local_novels() -> list:
+    entries = []
+    for key, item in _load().items():
+        if not (isinstance(item, dict) and item.get("title") and item.get("last")):
+            continue
+        last = last_read(key)
+        if last is None:
+            continue
+        entries.append(
+            {
+                "progress": last[1],
+                "updated": item.get("updated", 0),
+                "media": {
+                    "id": int(key),
+                    "title": {"english": item["title"], "romaji": item["title"]},
+                    "chapters": None,
+                    "format": "NOVEL",
+                },
+            }
+        )
+    return entries
 
 
 def forget_novel(media_id) -> None:

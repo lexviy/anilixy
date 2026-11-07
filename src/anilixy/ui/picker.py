@@ -28,7 +28,11 @@ def fzf_pick(app, items, prompt="> ", multi=False, header=None):
     try:
         with app.suspend():
             proc = subprocess.run(
-                command, input="\n".join(lines), capture_output=True, text=True
+                command,
+                input="\n".join(lines),
+                capture_output=True,
+                encoding="utf-8",
+                errors="replace",
             )
     except Exception:
         return None

@@ -6,9 +6,13 @@ from functools import lru_cache
 from rich.segment import Segment
 from rich.style import Style
 from textual.color import Color
+from textual.errors import NoWidget
+from textual.geometry import Region
 from textual.screen import ModalScreen
 from textual.strip import Strip
 from textual.widget import Widget
+from textual_image.widget import Image as ImageWidget
+from textual_image.widget import SixelImage
 
 KINDS = [
     "off",
@@ -1548,6 +1552,39 @@ def make_scene(kind, w, h, pal, rng=None):
     return scene(w, h, pal, rng) if scene else None
 
 
+SIXEL_IMAGES = ImageWidget is SixelImage
+
+
+def without(regions, hole):
+    kept = []
+    for region in regions:
+        cut = region.intersection(hole)
+        if not cut:
+            kept.append(region)
+            continue
+        kept += [
+            piece
+            for piece in (
+                Region(region.x, region.y, region.width, cut.y - region.y),
+                Region(region.x, cut.bottom, region.width, region.bottom - cut.bottom),
+                Region(region.x, cut.y, cut.x - region.x, cut.height),
+                Region(cut.right, cut.y, region.right - cut.right, cut.height),
+            )
+            if piece
+        ]
+    return kept
+
+
+def exposed_regions(backdrop):
+    regions = [backdrop.region]
+    for image in backdrop.screen.query(SixelImage):
+        try:
+            regions = without(regions, backdrop.screen.find_widget(image).visible_region)
+        except NoWidget:
+            continue
+    return regions
+
+
 class AnimationEngine:
 
     def __init__(self, app):
@@ -1636,7 +1673,10 @@ class AnimationEngine:
         visible = None if everywhere else self._visible_screens()
         for backdrop in list(self.backdrops):
             if backdrop.is_attached and (everywhere or backdrop.screen in visible):
-                backdrop.refresh()
+                if SIXEL_IMAGES and not everywhere:
+                    backdrop.refresh(*exposed_regions(backdrop))
+                else:
+                    backdrop.refresh()
 
 
 class Backdrop(Widget):

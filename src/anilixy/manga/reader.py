@@ -4,6 +4,7 @@ import logging
 import math
 import os
 import re
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -21,8 +22,11 @@ from textual.strip import Strip
 from textual.widget import Widget
 from textual.widgets import Input, OptionList, Static
 from textual.widgets.option_list import Option
+from textual_image._sixel import image_to_sixels
+from textual_image._terminal import probe_terminal
 
 from anilixy.anilist.api import save_manga_progress
+from anilixy.core import ipc
 from anilixy.manga import offline as manga_offline
 from anilixy.manga.history import get_last_chapter, set_last_chapter, set_last_page
 from anilixy.manga.sources import split_source_id
@@ -31,6 +35,10 @@ KITTY_START = "\x1b_G"
 KITTY_END = "\x1b\\"
 KITTY_CHUNK = 4096
 KITTY_CLEAR = f"{KITTY_START}a=d,d=A,q=2{KITTY_END}"
+SIXEL_BAND = 6
+SIXEL_FRAMES_KEPT = 8
+SYNC_START = "\x1b[?2026h"
+SYNC_END = "\x1b[?2026l"
 
 MIN_FRAME_INTERVAL = 0.04
 ZOOM_STEP = 0.1
@@ -59,6 +67,24 @@ def cell_size():
     except Exception:
         log.debug("ignored error", exc_info=True)
     return 10, 20
+
+
+def terminal_graphics():
+    try:
+        capabilities = probe_terminal()
+    except Exception:
+        log.debug("ignored error", exc_info=True)
+        return False, False
+    return capabilities.tgp, capabilities.sixel
+
+
+def use_sixel() -> bool:
+    kitty, sixel = terminal_graphics()
+    return sixel and not kitty
+
+
+def no_graphics() -> bool:
+    return not any(terminal_graphics())
 
 
 class ReaderScrollbar(Widget):
@@ -415,6 +441,8 @@ class MangaReaderScreen(Screen):
         self._last_end_notice = 0.0
         self._image_id = None
         self._background = None
+        self._sixel_frames = {}
+        self._sixel_lock = threading.Lock()
 
         self._cache = {}
         self._page_cache = {}
@@ -447,6 +475,13 @@ class MangaReaderScreen(Screen):
             yield ChaptersButton("Chapters (L)", id="chapters-btn")
 
     def on_mount(self):
+        if ipc.WINDOWS and no_graphics():
+            self.notify(
+                "This terminal can't show manga pages. Use Windows Terminal 1.22+ "
+                "or a WezTerm nightly build.",
+                severity="warning",
+                timeout=15,
+            )
         self.load_chapters()
 
     def on_resize(self, event) -> None:
@@ -701,7 +736,7 @@ class MangaReaderScreen(Screen):
         if not self._mode_manual:
             self.mode = "page"
         self._jump_page = page if (page and self.mode == "webtoon") else None
-        set_last_chapter(self.anilist_id, chapter_id, ch_num, page)
+        set_last_chapter(self.anilist_id, chapter_id, ch_num, page, self.title)
         if resumed:
             self.notify(f"Resuming at page {page + 1}", timeout=3)
         if ch_num:
@@ -928,19 +963,22 @@ class MangaReaderScreen(Screen):
                 images[idx] = self.fetch_image(url)
             except Exception:
                 log.debug("ignored error", exc_info=True)
+        if generation == self._generation and use_sixel():
+            self.app.call_from_thread(self.schedule_sixel_ahead)
 
     def group_start(self, page):
         if self._pair_offset == 1 and page == 0:
             return 0
         return page - ((page - self._pair_offset) % 2)
 
-    def visible_pages(self):
-        if self.mode == "page" and self.spread:
+    def visible_pages(self, start=None):
+        if start is None:
             start = self.page_index
+        if self.mode == "page" and self.spread:
             if (self._pair_offset == 1 and start == 0) or start + 1 >= len(self.pages):
                 return [start]
             return [start, start + 1]
-        return [self.page_index]
+        return [start]
 
     def load_current_view(self):
         if self.mode == "page" and self.spread and self.pages:
@@ -1106,10 +1144,10 @@ class MangaReaderScreen(Screen):
         self._spreads[key] = canvas
         return key, canvas
 
-    def page_layout(self, sw, sh):
+    def page_layout(self, sw, sh, pages=None):
         items = []
         if self.mode == "page":
-            pages = self.visible_pages()
+            pages = pages or self.visible_pages()
             if len(pages) == 2:
                 key, img = self.spread_image(*pages)
             else:
@@ -1189,6 +1227,70 @@ class MangaReaderScreen(Screen):
             canvas.paste(piece, ((canvas_w - w) // 2, screen_y + dst0))
         return canvas
 
+    def encode_sixel(self, canvas, sw):
+        height = canvas.height - canvas.height % SIXEL_BAND
+        frame = PILImage.new("RGB", (sw, height), self.background_rgb())
+        frame.paste(canvas, ((sw - canvas.width) // 2, 0))
+        return image_to_sixels(frame)
+
+    def sixel_key(self, pages, sw, sh, offset):
+        return (
+            self._generation,
+            tuple(pages),
+            self.mode,
+            self.spread,
+            self.zoom,
+            sw,
+            sh,
+            offset,
+            self.background_rgb(),
+        )
+
+    def keep_sixel(self, key, data):
+        with self._sixel_lock:
+            self._sixel_frames[key] = data
+            while len(self._sixel_frames) > SIXEL_FRAMES_KEPT:
+                self._sixel_frames.pop(next(iter(self._sixel_frames)))
+
+    def draw_sixel(self, items, offset, sw, sh, cell_w, reader_x, reader_y):
+        key = self.sixel_key(self.visible_pages(), sw, sh, offset)
+        cached = self.mode == "page"
+        data = self._sixel_frames.get(key) if cached else None
+        if data is None:
+            data = self.encode_sixel(self.build_frame(items, offset, sw, sh, cell_w), sw)
+            if cached:
+                self.keep_sixel(key, data)
+        self._tty_write(
+            f"{SYNC_START}\x1b7\x1b[{reader_y + 1};{reader_x + 1}H{data}\x1b8{SYNC_END}"
+        )
+        if cached:
+            self.encode_neighbours(sw, sh, cell_w)
+
+    def schedule_sixel_ahead(self):
+        geo = self.view_geometry() if self.is_attached else None
+        if geo is not None and self.mode == "page":
+            cols, rows, cell_w, cell_h, _, _ = geo
+            self.encode_neighbours(cols * cell_w, rows * cell_h, cell_w)
+
+    @work(thread=True, exclusive=True, group="sixel")
+    def encode_neighbours(self, sw, sh, cell_w):
+        generation = self._generation
+        shown = self.visible_pages()
+        for start in (shown[-1] + 1, shown[0] - len(shown)):
+            if generation != self._generation or self.mode != "page":
+                return
+            if not 0 <= start < len(self.pages):
+                continue
+            pages = self.visible_pages(start)
+            key = self.sixel_key(pages, sw, sh, 0)
+            items = self.page_layout(sw, sh, pages)
+            if key in self._sixel_frames or not items:
+                continue
+            try:
+                self.keep_sixel(key, self.encode_sixel(self.build_frame(items, 0, sw, sh, cell_w), sw))
+            except Exception:
+                log.debug("ignored error", exc_info=True)
+
     def send_frame(self, canvas, cols, rows, cell_w, reader_x, reader_y):
         width, height = canvas.size
         canvas_cols = width // cell_w
@@ -1235,7 +1337,10 @@ class MangaReaderScreen(Screen):
             os.close(fd)
 
     def _clear_image(self):
-        self._tty_write(KITTY_CLEAR)
+        if use_sixel():
+            self.query_one("#reader", Static).refresh()
+        else:
+            self._tty_write(KITTY_CLEAR)
         self._image_id = None
         try:
             self.query_one("#scrollbar", ReaderScrollbar).set_thumb(None)
@@ -1267,8 +1372,11 @@ class MangaReaderScreen(Screen):
         offset = int(round(self._y_offset))
 
         try:
-            canvas = self.build_frame(items, offset, sw, sh, cell_w)
-            self.send_frame(canvas, cols, rows, cell_w, reader_x, reader_y)
+            if use_sixel():
+                self.draw_sixel(items, offset, sw, sh, cell_w, reader_x, reader_y)
+            else:
+                canvas = self.build_frame(items, offset, sw, sh, cell_w)
+                self.send_frame(canvas, cols, rows, cell_w, reader_x, reader_y)
         except Exception as e:
             self.notify(f"Error drawing image: {e}", severity="error")
             return

@@ -1,4 +1,5 @@
 import logging
+import time
 
 from anilixy.core.storage import CONFIG_DIR, load_json, write_json
 
@@ -69,14 +70,36 @@ def clear_last_chapter(anilist_id):
         save_history(h)
 
 
-def set_last_chapter(anilist_id, chapter_id, chapter_number=None, page=0):
+def set_last_chapter(anilist_id, chapter_id, chapter_number=None, page=0, title=None):
     h = load_history()
     h[str(anilist_id)] = {
         "chapter_id": chapter_id,
         "chapter_number": chapter_number,
         "page": page,
+        "title": title,
+        "updated": time.time(),
     }
     save_history(h)
+
+
+def local_manga() -> list:
+    items = [
+        (key, item)
+        for key, item in load_history().items()
+        if isinstance(item, dict) and item.get("title") and key.isdigit()
+    ]
+    return [
+        {
+            "progress": item.get("chapter_number"),
+            "updated": item.get("updated", 0),
+            "media": {
+                "id": int(key),
+                "title": {"english": item["title"], "romaji": item["title"]},
+                "chapters": None,
+            },
+        }
+        for key, item in items
+    ]
 
 
 def set_last_page(anilist_id, chapter_id, page):

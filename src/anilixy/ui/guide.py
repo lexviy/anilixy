@@ -1,9 +1,22 @@
+from pathlib import Path
+
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Static, TabbedContent, TabPane
+
+from anilixy.core.ipc import WINDOWS
+from anilixy.core.storage import CACHE_DIR, CONFIG_DIR, DATA_DIR
+
+
+def _shown(path: Path) -> str:
+    try:
+        return f"~/{path.relative_to(Path.home()).as_posix()}"
+    except ValueError:
+        return str(path)
+
 
 GUIDE = [
     (
@@ -47,6 +60,15 @@ GUIDE = [
                 [
                     "mpv and ani-cli to watch anime, fzf to pick between results "
                     "(without fzf the first result is used).",
+                    *(
+                        [
+                            "On Windows, ani-cli runs through Git Bash, so Git for "
+                            "Windows is needed too. Images need Windows Terminal 1.22+ "
+                            "or a WezTerm nightly build.",
+                        ]
+                        if WINDOWS
+                        else []
+                    ),
                 ],
             ),
         ],
@@ -191,8 +213,8 @@ GUIDE = [
                 [
                     "While Anilixy is open it checks for new episodes and chapters a few "
                     "seconds after starting and then every 30 minutes.",
-                    "You get a message in the app and a desktop notification (notify-send). "
-                    "Turn desktop notifications off in Settings.",
+                    "You get a message in the app and, where notify-send is available, "
+                    "a desktop notification. Turn desktop notifications off in Settings.",
                     "Manga chapters are only checked for manga that already have a "
                     "saved source.",
                 ],
@@ -200,10 +222,10 @@ GUIDE = [
             (
                 "Where things are saved",
                 [
-                    "~/.config/anilixy: login, settings, progress and saved sources.",
-                    "~/.cache/anilixy: covers, AniList pages and the log "
+                    f"{_shown(CONFIG_DIR)}: login, settings, progress and saved sources.",
+                    f"{_shown(CACHE_DIR)}: covers, AniList pages and the log "
                     "(anilixy.log). Clean cache in Settings empties it.",
-                    "~/.local/share/anilixy/manga: chapters saved offline.",
+                    f"{_shown(DATA_DIR / 'manga')}: chapters saved offline.",
                     "Discord Rich Presence shows what you are watching or reading; "
                     "turn it off in Settings.",
                 ],
