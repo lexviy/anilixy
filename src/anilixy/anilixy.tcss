@@ -1,0 +1,229 @@
+Screen { background: $background; }
+LoginScreen, MenuScreen, SearchScreen, MangaSearchScreen, CharacterSearchScreen, StaffSearchScreen, StudioSearchScreen, ThemeScreen, StudioScreen, KeepWatchingScreen, KeepReadingScreen, AnimationScreen, SettingsScreen, CustomNovelsScreen, CharacterScreen, StaffScreen, AnimeScreen, MangaScreen { align: center middle; }
+
+Screen { layers: backdrop content; }
+Backdrop { layer: backdrop; width: 100%; height: 100%; }
+#login, #menu-wrap, #theme-box, #search-box, #keep-box, #studio-box, #anim-box { layer: content; }
+AnimeScreen, MangaScreen { align: center top; }
+#anime-body { layer: content; width: 100%; max-width: 120; height: 100%; padding: 1 2; }
+MyAniListScreen { align: center top; }
+#my-body { layer: content; width: 100%; max-width: 120; height: 100%; padding: 1 2; }
+CharacterScreen, StaffScreen { align: center middle; }
+#char-body { layer: content; width: 100%; max-width: 110; height: auto; max-height: 95%; padding: 1 2; }
+#char-top { height: 1fr; }
+#char-left { width: 1fr; height: 1fr; }
+#char-overview-box { height: 1fr; background: $surface; border: round $primary; padding: 0 2; margin-bottom: 1; }
+#char-desc-scroll { height: 1fr; }
+#char-media-box { height: 18; background: $surface; border: round $primary; padding: 0 1; }
+#char-media-box HorizontalScroll { width: 100%; height: 1fr; }
+#char-right { width: 32; margin-left: 1; }
+#char-image-box { width: 100%; background: $surface; border: round $primary; padding: 0 1; align: center top; }
+#char-image { width: 100%; height: auto; max-height: 24; }
+#char-name-row { width: auto; height: 1; }
+#char-name-box { width: auto; }
+#person-favorite-star, #studio-favorite-star { width: 2; height: 1; margin-left: 1; color: $warning; text-style: bold; }
+#studio-heading { width: auto; height: 1; }
+#studio-name { width: auto; }
+#char-info-box { width: 100%; background: $surface; border: round $primary; padding: 0 1; margin-top: 1; height: 1fr; }
+#char-info-scroll { width: 100%; height: 1fr; }
+#char-info { width: 100%; text-align: left; }
+#char-desc { width: 100%; }
+.char-section { color: $secondary; text-style: bold; margin-bottom: 1; }
+#char-related-row { width: 100%; height: 1fr; overflow-x: auto; overflow-y: auto; scrollbar-size-horizontal: 1; }
+#my-title { width: 100%; text-align: center; color: $secondary; text-style: bold; margin-bottom: 1; }
+#my-tabs { height: 1fr; background: $surface; border: round $primary; }
+#my-tabs ContentSwitcher { height: 1fr; }
+#my-tabs TabPane { height: 1fr; padding: 0 1; }
+#my-tabs VerticalScroll { height: 1fr; }
+.my-placeholder { color: $text-muted; padding: 1 2; }
+#my-hint { width: 100%; text-align: center; color: $text-muted; margin-top: 1; }
+#overview-row { height: 1fr; }
+#activity-column { width: 1fr; height: 1fr; padding-right: 1; }
+#profile-column { width: 34; height: 1fr; padding-left: 1; border-left: solid $primary; }
+#avatar-row { width: 100%; height: auto; align-horizontal: center; align-vertical: top; }
+#overview-avatar { width: auto; max-width: 38; height: auto; margin-bottom: 1; }
+#overview-name { width: 100%; text-align: center; color: $secondary; text-style: bold; margin-bottom: 1; }
+#overview-counts { width: 100%; text-align: center; margin-bottom: 1; }
+#activity-list { height: auto; }
+.activity-row { height: 9; margin-bottom: 1; align-vertical: middle; }
+.activity-cover { width: 11; height: 8; margin-right: 1; }
+.activity-info { width: 1fr; height: auto; }
+.activity-title { width: 100%; height: 1; }
+.activity-detail { width: 100%; }
+.activity-meta { width: 100%; color: $text-muted; }
+.genre-overview { width: 100%; color: $secondary; }
+#anime-list-wrap { height: 1fr; }
+#anime-list-controls { height: auto; margin-bottom: 1; layout: horizontal; }
+#anime-list-controls Button { margin-right: 1; width: 1fr; min-width: 5; }
+#anime-list-search { margin-bottom: 1; }
+#anime-list-count { color: $text-muted; margin-bottom: 1; }
+#anime-list-scroll { height: 1fr; }
+.anime-list-row { height: 7; margin-bottom: 1; align-vertical: middle; }
+.anime-list-cover { width: 8; height: 6; margin-right: 1; }
+.anime-list-info { width: 1fr; height: auto; }
+.anime-list-title { width: 100%; }
+.anime-list-meta { width: 100%; color: $text-muted; }
+#manga-list-wrap { height: 1fr; }
+#ml-filter-controls { height: auto; margin-bottom: 1; layout: horizontal; }
+#ml-filter-controls Button { margin-right: 1; width: 1fr; min-width: 5; }
+#manga-list-search { margin-bottom: 1; }
+#manga-list-count { color: $text-muted; margin-bottom: 1; }
+#manga-list-scroll { height: 1fr; }
+.manga-list-row { height: 7; margin-bottom: 1; align-vertical: middle; }
+.manga-list-cover { width: 8; height: 6; margin-right: 1; }
+.manga-list-info { width: 1fr; height: auto; }
+.manga-list-title { width: 100%; }
+.manga-list-meta { width: 100%; color: $text-muted; }
+#fav-wrap { height: 1fr; }
+#fav-filter-controls { height: auto; margin-bottom: 1; layout: horizontal; }
+#fav-filter-controls Button { margin-right: 1; width: 1fr; min-width: 5; }
+#fav-search { margin-bottom: 1; }
+#fav-count { color: $text-muted; margin-bottom: 1; }
+#fav-scroll { height: 1fr; }
+.fav-row { height: 7; margin-bottom: 1; align-vertical: middle; }
+.fav-cover { width: 8; height: 6; margin-right: 1; }
+.fav-info { width: 1fr; height: auto; }
+.fav-title { width: 100%; }
+.fav-meta { width: 100%; color: $text-muted; }
+#stats-row { height: 1fr; layout: horizontal; }
+.stats-col { width: 1fr; height: 100%; padding: 0 2; border-right: solid $primary; overflow-y: auto; }
+.stats-col:last-of-type { border-right: none; }
+.stats-title { text-style: bold; color: $secondary; margin-bottom: 1; text-align: center; }
+#stats-anime-buckets, #stats-anime-status, #stats-anime-formats,
+#stats-manga-buckets, #stats-manga-status, #stats-manga-formats { margin-bottom: 2; }
+#overview-row.narrow-overview { layout: vertical; }
+#overview-row.narrow-overview #activity-column { width: 100%; height: 1fr; padding-right: 0; }
+#overview-row.narrow-overview #profile-column { width: 100%; height: 1fr; padding-left: 0; border-left: none; border-top: solid $primary; }
+#overview-row.narrow-overview #avatar-row { align-horizontal: center; }
+#settings-box { layer: content; width: 70; height: auto; background: $surface; border: round $primary; padding: 1 2; }
+#settings-header { width: 100%; height: auto; }
+#settings-title { width: 1fr; height: 3; content-align: left middle; margin-bottom: 0; }
+#open-guide { width: auto; }
+#cache-row { width: 100%; height: auto; margin-bottom: 1; }
+#cache-info { width: 1fr; height: auto; min-height: 3; color: $text-muted; content-align: left middle; }
+#clean-cache { width: auto; }
+#ln-row { width: 100%; height: 3; }
+#ln-label { width: 1fr; height: 3; content-align: left middle; }
+#ln-change { width: auto; }
+#ln-info { color: $text-muted; margin-bottom: 1; }
+FolderPickerScreen { align: center middle; background: $background 60%; }
+#picker-box { layer: content; width: 80; max-width: 98%; height: 90%; background: $surface; border: round $primary; padding: 1 2; }
+#picker-tree { height: 1fr; margin: 1 0; background: $surface; }
+#picker-hint { color: $text-muted; }
+#picker-buttons { width: 100%; height: 3; margin-top: 1; align-horizontal: right; }
+#picker-buttons Button { margin-left: 2; }
+#discord-row { width: 100%; height: 3; margin-bottom: 1; }
+#delay-row { width: 100%; height: 3; margin-bottom: 1; }
+#delay-label { width: 1fr; height: 3; content-align: left middle; }
+#delay-input { width: 10; }
+#discord-label { width: 1fr; height: 3; content-align: left middle; }
+ListEditorScreen { align: center middle; background: $background 60%; }
+#editor-box { layer: content; width: 72; max-width: 98%; height: auto; max-height: 95%; background: $surface; border: round $primary; padding: 1 2; }
+#editor-title { width: 100%; text-align: center; color: $secondary; text-style: bold; margin-bottom: 1; }
+.editor-status-row { width: 100%; height: 3; }
+.editor-status-row Button { width: 1fr; margin-right: 1; }
+.editor-field-row { width: 100%; height: 3; margin-top: 1; }
+.editor-cell { width: 1fr; height: 3; }
+.editor-label { width: 10; height: 3; content-align: left middle; }
+.editor-cell Input { width: 10; }
+.editor-total { width: auto; height: 3; content-align: left middle; margin-left: 1; color: $text-muted; }
+#editor-buttons { width: 100%; height: 3; margin-top: 1; align-horizontal: right; }
+#editor-buttons Button { margin-left: 2; }
+HelpScreen { align: center middle; background: $background 60%; }
+#help-box { layer: content; width: 100; max-width: 98%; height: auto; max-height: 92%; background: $surface; border: round $primary; padding: 1 2; }
+#help-scroll { height: auto; max-height: 30; margin-bottom: 1; }
+#custom-box { layer: content; width: 80; height: auto; max-height: 95%; background: $surface; border: round $primary; padding: 1 2; }
+#custom-list { height: auto; max-height: 20; background: $surface; margin: 1 0; }
+#custom-count { color: $text-muted; }
+#custom-buttons { width: 100%; height: 3; margin-bottom: 1; }
+#custom-buttons Button { margin-right: 2; }
+CustomNovelModal, ConfirmScreen { align: center middle; background: $background 60%; }
+#add-custom-box, #confirm-box { layer: content; width: 64; max-width: 98%; height: auto; background: $surface; border: round $primary; padding: 1 2; }
+#add-custom-box { width: 84; }
+#add-custom-hint { color: $text-muted; margin: 1 0; }
+#add-custom-buttons, #confirm-buttons { width: 100%; height: 3; margin-top: 1; align-horizontal: right; }
+#add-custom-buttons Button, #confirm-buttons Button { margin-left: 2; }
+#anim-box { layer: content; width: 44; height: auto; background: $surface; border: round $primary; padding: 1 2; }
+#anim-list { height: auto; background: $surface; }
+#login, #menu, #search-box { width: 60; height: auto; background: $surface; border: round $primary; padding: 1 2; }
+.box-title { text-style: bold; color: $secondary; margin-bottom: 1; }
+#login Static { link-color: $accent; link-style: underline; }
+#login Input, #login Button { margin-bottom: 1; }
+#menu OptionList { height: auto; background: $surface; }
+#menu-wrap { width: 60; height: auto; }
+#logo { width: 100%; text-align: center; color: $primary; margin-bottom: 1; }
+#search-box { width: 80; max-height: 95%; }
+#results { display: none; height: auto; max-height: 70vh; margin: 1 0; background: $surface; }
+#theme-box { width: 44; height: auto; max-height: 95%; background: $surface; border: round $primary; padding: 1 2; }
+#theme-list { height: auto; max-height: 60vh; background: $surface; }
+#keep-box { width: 80; height: auto; max-height: 95%; background: $surface; border: round $primary; padding: 1 2; }
+#keep-list { height: auto; max-height: 20; background: $surface; margin: 1 0; }
+#top           { height: 24; }
+#left          { width: 1fr; }
+#info          { height: auto; background: $surface; border: round $primary; padding: 0 2; }
+#info-text     { width: 1fr; }
+#favorite-star { width: 2; height: 1; color: $warning; text-style: bold; content-align: right top; }
+#synopsis-box  { height: 1fr; background: $surface; border: round $primary; padding: 0 2; }
+#title         { width: 100%; text-align: center; color: $secondary; text-style: bold; margin-bottom: 1; }
+#synopsis      { width: 100%; }
+#cover         { width: 34; height: 24; background: $surface; border: round $primary; }
+#middle        { height: 1fr; background: $surface; border: round $primary; }
+#middle ContentSwitcher { height: 1fr; }
+#middle TabPane { height: 1fr; padding: 0 1; }
+#middle VerticalScroll { height: 1fr; }
+#studios-box   { height: auto; }
+.section       { margin-top: 1; }
+#related-row, #recs-row { height: 100%; overflow-y: auto; }
+.rec-kind      { color: $text-muted; height: auto; }
+.rel-card      { width: 16; height: auto; margin: 0 1; }
+.rel-cover     { width: 12; height: 9; }
+.rel-title     { width: 100%; height: auto; min-height: 2; }
+.rel-kind      { color: $text-muted; height: 1; }
+.clickable { color: $accent; text-style: underline; }
+.clickable:hover { background: $primary 20%; }
+.clickable:focus { background: $primary 40%; text-style: bold underline; }
+#bar           { height: 5; background: $surface; border: round $primary; align: center middle; }
+#bar Button    { margin: 0 2; }
+#episode-label { width: auto; height: 3; content-align: left middle; margin: 0 1 0 2; }
+#episode       { width: 10; }
+#chapter       { width: 12; }
+#studio-box { width: 90%; height: 95%; background: $surface; border: round $primary; padding: 1 2; }
+#studio-scroll { height: 1fr; background: $surface; }
+.year-header   { color: $secondary; margin: 1 0 0 0; }
+.studio-row    { height: 8; }
+.studio-cover  { width: 10; height: 7; margin: 0 2 0 0; }
+.studio-info   { width: 1fr; height: auto; }
+#load-more     { margin: 1 0; }
+VolumesScreen, SourcePickerScreen { align: center middle; background: $background 60%; }
+#volumes-box, #source-box { layer: content; width: 84; max-width: 98%; height: auto; max-height: 90%; background: $surface; border: round $primary; padding: 1 2; }
+#volumes-hint, #source-hint { color: $text-muted; margin-bottom: 1; }
+#volumes-list, #source-list { height: auto; max-height: 24; background: $surface; }
+#volumes-buttons, #source-buttons { width: 100%; height: 3; margin-top: 1; align-horizontal: right; }
+.settings-row { width: 100%; height: 3; margin-bottom: 1; }
+.settings-label { width: 1fr; height: 3; content-align: left middle; }
+#quality-select { width: 20; }
+#clear-downloads { width: auto; }
+#open-sync, #open-extensions { width: auto; }
+ExtensionsScreen { align: center middle; background: $background 60%; }
+#extensions-box { layer: content; width: 84; max-width: 98%; height: auto; max-height: 90%; background: $surface; border: round $primary; padding: 1 2; }
+#extensions-hint { color: $text-muted; margin-bottom: 1; }
+#extensions-list { height: auto; max-height: 20; overflow-y: auto; margin-bottom: 1; }
+#extensions-buttons { width: 100%; height: 3; margin-bottom: 1; align-horizontal: right; }
+#extensions-buttons Button { margin-left: 2; }
+#update-app { width: auto; }
+SyncScreen { align: center middle; background: $background 60%; }
+#sync-box { layer: content; width: 80; max-width: 98%; height: auto; background: $surface; border: round $primary; padding: 1 2; }
+#sync-hint, #sync-status { color: $text-muted; margin-bottom: 1; }
+#sync-token { margin-bottom: 1; }
+#sync-buttons { width: 100%; height: 3; margin-bottom: 1; align-horizontal: right; }
+#sync-buttons Button { margin-left: 2; }
+GuideScreen { align: center middle; background: $background 60%; }
+#guide-box { layer: content; width: 110; max-width: 98%; height: 90%; background: $surface; border: round $primary; padding: 1 2; }
+#guide-tabs { height: 1fr; }
+#guide-tabs ContentSwitcher { height: 1fr; }
+#guide-tabs TabPane { height: 1fr; padding: 1 1 0 1; }
+.guide-scroll { height: 1fr; }
+.guide-text { width: 100%; }
+#guide-buttons { width: 100%; height: 3; margin-top: 1; }
+#guide-hint { width: 1fr; height: 3; content-align: left middle; color: $text-muted; }
+#guide-close { width: auto; }

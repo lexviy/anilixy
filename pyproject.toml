@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anilixy"
+version = "0.4.0"
+description = "Terminal app to watch anime, read manga and light novels, synced with AniList."
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{ name = "lexviy" }]
+keywords = ["anilist", "anime", "manga", "light-novel", "tui", "textual", "ani-cli"]
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31.0",
+    "rich>=13.0.0",
+    "textual",
+    "textual-image",
+    "pillow",
+    "beautifulsoup4",
+    "ebooklib",
+    "numpy; sys_platform == 'win32'",
+]
+
+[project.optional-dependencies]
+pdf = ["pymupdf"]
+
+[project.urls]
+Homepage = "https://github.com/lexviy/anilixy"
+Issues = "https://github.com/lexviy/anilixy/issues"
+
+[project.scripts]
+anilixy = "anilixy.main:main"
+
+[tool.setuptools.package-data]
+anilixy = ["*.tcss"]
